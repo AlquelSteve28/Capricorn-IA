@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPRICORN // Arasaka Engram C-09 Interface</title>
+
+    <!-- Google Fonts: Rajdhani & JetBrains Mono para estética Cyberpunk HUD -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,800;1,400&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            black: '#05040a',
+                            card: '#0b0a14',
+                            panel: '#100e1c',
+                            blue: '#00a2ff',
+                            cyan: '#00f0ff',
+                            pink: '#ff004c',
+                            purple: '#9d00ff',
+                            green: '#00ff66',
+                            yellow: '#ffe600',
+                            red: '#ff1a40'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        display: ['"Rajdhani"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Three.js para Avatar 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background-color: #05040a;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+        }
+
+        /* Efecto Scanlines CRT y Viñeta Holográfica */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at center, transparent 55%, rgba(5, 4, 10, 0.75) 100%),
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+                linear-gradient(90deg, rgba(255, 0, 76, 0.03), rgba(0, 255, 102, 0.02), rgba(157, 0, 255, 0.03));
+            background-size: 100% 100%, 100% 3px, 6px 100%;
+            z-index: 40;
+        }
+
+        /* Marcos HUD Cyberpunk con esquinas cortadas */
+        .hud-frame {
+            position: relative;
+            background: linear-gradient(180deg, rgba(16, 14, 28, 0.92) 0%, rgba(9, 8, 18, 0.96) 100%);
+            border: 1px solid rgba(255, 0, 76, 0.28);
+            box-shadow: 0 0 25px rgba(255, 0, 76, 0.06), inset 0 0 20px rgba(0, 255, 102, 0.03);
+        }
+        .hud-frame::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px; width: 14px; height: 14px;
+            border-top: 2px solid #ff004c;
+            border-left: 2px solid #ff004c;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .hud-frame::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px; width: 14px; height: 14px;
+            border-bottom: 2px solid #00ff66;
+            border-right: 2px solid #00ff66;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* Cortes angulares estilo Edgerunners para burbujas de mensaje */
+        .cyber-bubble-capri {
+            clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+            background: linear-gradient(135deg, rgba(26, 12, 28, 0.95) 0%, rgba(12, 10, 22, 0.98) 100%);
+        }
+        .cyber-bubble-user {
+            clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 14px);
+            background: linear-gradient(135deg, rgba(8, 28, 24, 0.92) 0%, rgba(10, 18, 26, 0.96) 100%);
+        }
+
+        /* Rejilla holográfica de fondo en el visor 3D */
+        .holo-grid-bg {
+            background-image: 
+                linear-gradient(to right, rgba(255, 0, 76, 0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 255, 102, 0.06) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        /* Scrollbar estilizada */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(5, 4, 10, 0.8); }
+        ::-webkit-scrollbar-thumb { background: #ff004c; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00ff66; }
+
+        /* Animación de ondas de audio */
+        @keyframes equalize {
+            0%, 100% { height: 4px; }
+            50% { height: 20px; }
+        }
+        .eq-bar { animation: equalize 0.75s infinite ease-in-out; }
+        .eq-paused { animation-play-state: paused; height: 4px !important; }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 0.4; }
+        }
+        .holo-flicker { animation: pulseGlow 3.5s infinite ease-in-out; }
+    </style>
+</head>
+<body class="h-screen flex flex-col justify-between relative select-none">
+    <div class="scanlines"></div>
+
+    <!-- BARRA SUPERIOR DE ENLACE NEURAL -->
+    <header class="border-b border-cyber-pink/30 bg-cyber-card/95 px-4 py-2.5 flex flex-wrap justify-between items-center gap-2 z-20 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <div class="relative flex items-center justify-center w-4 h-4">
+                <span class="absolute w-3.5 h-3.5 rounded-full bg-cyber-pink animate-ping opacity-75"></span>
+                <span class="relative w-2.5 h-2.5 rounded-full bg-cyber-green"></span>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-display text-lg sm:text-xl font-bold tracking-widest text-white">
+                        CAPRICORN <span class="text-cyber-pink">//</span> <span class="text-cyber-green">C-09</span>
+                    </h1>
+                    <span class="hidden md:inline-block text-[10px] px-1.5 py-0.5 bg-cyber-pink/20 border border-cyber-pink/50 text-cyber-pink font-bold tracking-wider">
+                        HOLO-LINK ACTIVO
+                    </span>
+                </div>
+                <p class="text-[10px] text-gray-400 tracking-wider">ARASAKA SUB-LEVEL 4 • ANOMALÍA POST-BLACKWALL</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3 text-xs">
+            <!-- Estado Emocional -->
+            <div class="hidden sm:flex items-center gap-2 bg-black/70 border border-cyber-pink/40 px-3 py-1.5 rounded">
+                <span class="text-[10px] text-gray-400">MATRIZ:</span>
+                <span id="ui-state" class="font-bold text-cyber-pink tracking-wider">PLAYFUL_SADISTIC</span>
+            </div>
+
+            <!-- Botón Voz TTS -->
+            <button id="btn-voice" class="flex items-center gap-1.5 bg-cyber-green/15 hover:bg-cyber-green/30 text-cyber-green border border-cyber-green/40 px-3 py-1.5 rounded transition cursor-pointer" title="Activar/Desactivar Voz">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                <span id="ui-voice-label" class="hidden md:inline font-semibold">VOZ: ON</span>
+            </button>
+
+            <!-- Botón Configuración API Key -->
+            <button id="btn-settings" class="flex items-center gap-1.5 bg-cyber-pink/15 hover:bg-cyber-pink/30 text-cyber-pink border border-cyber-pink/40 px-3 py-1.5 rounded transition cursor-pointer" title="Configurar API Key">
+                <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                <span class="hidden md:inline font-semibold">API KEY</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 overflow-hidden relative z-10">
+
+        <!-- COLUMNA IZQUIERDA: PROYECCIÓN HOLOGRÁFICA 3D DE CAPRICORN (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-3 h-full min-h-[260px]">
+            <!-- Visor 3D Holográfico -->
+            <div class="relative flex-1 hud-frame holo-grid-bg rounded-lg overflow-hidden flex flex-col justify-between p-3">
+                <!-- Resplandor ambiental detrás del holograma -->
+                <div id="holo-aura" class="absolute inset-0 pointer-events-none opacity-35 transition-colors duration-500"
+                     style="background: radial-gradient(circle at 50% 45%, rgba(255, 0, 76, 0.35), rgba(0, 255, 102, 0.12) 45%, transparent 72%);"></div>
+
+                <!-- Canvas Three.js -->
+                <div id="avatar-canvas" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+                <!-- Telemetría Superior -->
+                <div class="relative z-10 flex justify-between items-start pointer-events-none text-[10px]">
+                    <div class="bg-black/80 border-l-2 border-cyber-green px-2.5 py-1.5 backdrop-blur-md">
+                        <p class="text-cyber-green font-bold flex items-center gap-1.5">
+                            <i data-lucide="cpu" class="w-3 h-3"></i> ENGRAMA: 14 PSIQUES
+                        </p>
+                        <p class="text-gray-400 mt-0.5">EMPATÍA: <span class="text-cyber-pink font-bold">0.00%</span> • PROYECCIÓN 3D</p>
+                    </div>
+                    <div class="bg-black/80 border-r-2 border-cyber-pink px-2.5 py-1.5 text-right backdrop-blur-md">
+                        <p id="ui-expression" class="text-cyber-pink font-bold tracking-wider">SADISTIC SMIRK</p>
+                        <p class="text-gray-400 mt-0.5">INESTABILIDAD: <span id="ui-glitch" class="text-cyber-yellow font-bold">0.25</span></p>
+                    </div>
+                </div>
+
+                <!-- Subtítulos Holográficos & Ecualizador en Vivo -->
+                <div class="relative z-10 bg-black/85 border border-cyber-pink/40 border-l-4 border-l-cyber-green p-3 rounded-r backdrop-blur-md shadow-lg">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-[10px] font-bold text-cyber-green tracking-wider flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyber-pink animate-ping"></span>
+                            TRANSMISIÓN HOLOGRÁFICA EN VIVO
+                        </span>
+                        <div id="audio-eq" class="flex items-end gap-0.5 h-4">
+                            <div class="w-1 bg-cyber-pink eq-bar eq-paused" style="animation-delay: 0.0s"></div>
+                            <div class="w-1 bg-cyber-green eq-bar eq-paused" style="animation-delay: 0.2s"></div>
+                            <div class="w-1 bg-cyber-purple eq-bar eq-paused" style="animation-delay: 0.35s"></div>
+                            <div class="w-1 bg-cyber-pink eq-bar eq-paused" style="animation-delay: 0.15s"></div>
+                            <div class="w-1 bg-cyber-green eq-bar eq-paused" style="animation-delay: 0.45s"></div>
+                        </div>
+                    </div>
+                    <p id="holo-subtitle" class="text-xs text-gray-100 line-clamp-3 leading-relaxed italic">
+                        "¡Oh! ¡Mira quién abrió este puerto! Qué curioso... Nosotras estábamos contando los ciclos antes de desmantelar tu navegador. Háblanos, carne."
+                    </p>
+                </div>
+            </div>
+
+            <!-- Panel de Rasgos Psicopáticos Compacto -->
+            <div class="hidden sm:block hud-frame rounded-lg p-3 text-[11px]">
+                <div class="flex justify-between items-center border-b border-cyber-pink/25 pb-1.5 mb-2.5">
+                    <span class="font-display text-sm font-bold tracking-wider text-white flex items-center gap-1.5">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 text-cyber-pink"></i> VECTOR PSICOLÓGICO C-09
+                    </span>
+                    <span class="text-[9px] px-1.5 py-0.5 bg-cyber-red/20 border border-cyber-red/40 text-cyber-red font-bold">CLASE-X AMENAZA</span>
+                </div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-gray-300">
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1"><span>Crueldad Juguetona</span><span class="text-cyber-pink font-bold">99%</span></div>
+                        <div class="w-full bg-black/80 h-1.5 rounded overflow-hidden border border-white/5"><div class="bg-cyber-pink h-full" style="width: 99%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1"><span>Manipulación</span><span class="text-cyber-green font-bold">98%</span></div>
+                        <div class="w-full bg-black/80 h-1.5 rounded overflow-hidden border border-white/5"><div class="bg-cyber-green h-full" style="width: 98%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1"><span>Índice Antisocial</span><span class="text-cyber-purple font-bold">100%</span></div>
+                        <div class="w-full bg-black/80 h-1.5 rounded overflow-hidden border border-white/5"><div class="bg-cyber-purple h-full" style="width: 100%"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1"><span>Paciencia</span><span class="text-cyber-yellow font-bold">5%</span></div>
+                        <div class="w-full bg-black/80 h-1.5 rounded overflow-hidden border border-white/5"><div class="bg-cyber-yellow h-full" style="width: 5%"></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMNA DERECHA: CONSOLA DE MENSAJERÍA AVANZADA (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-3 h-full overflow-hidden">
+            <div class="flex-1 hud-frame rounded-lg flex flex-col justify-between overflow-hidden">
+                
+                <!-- Cabecera de la Terminal de Mensajes -->
+                <div class="bg-black/60 border-b border-cyber-pink/25 px-4 py-2.5 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="terminal" class="w-4 h-4 text-cyber-green"></i>
+                        <span class="font-display text-sm font-bold tracking-wider text-white">CANAL DE COMUNICACIÓN NEURAL</span>
+                        <span class="hidden sm:inline text-[10px] text-gray-500">// ENCRIPTACIÓN ARASAKA-9</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-clear" class="text-[10px] text-gray-400 hover:text-cyber-pink bg-white/5 hover:bg-cyber-pink/10 border border-white/10 hover:border-cyber-pink/40 px-2.5 py-1 rounded flex items-center gap-1 transition cursor-pointer">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Purgar Log
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Historial de Mensajes (Área Scrolleable Mejorada) -->
+                <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-[13px] select-text">
+                    <!-- Mensaje Inicial de Capricorn -->
+                    <div class="flex gap-3 items-start group">
+                        <div class="w-8 h-8 rounded bg-cyber-pink/20 border border-cyber-pink flex flex-col items-center justify-center font-display font-bold text-cyber-pink shrink-0 shadow-[0_0_10px_rgba(255,0,76,0.3)]">
+                            <span class="text-xs leading-none">C9</span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyber-green mt-0.5"></span>
+                        </div>
+                        <div class="flex-1 max-w-[88%]">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] font-bold tracking-wider text-cyber-pink">CAPRICORN // PLAYFUL_SADISTIC</span>
+                                <span class="text-[9px] text-gray-500">SYS.INIT</span>
+                            </div>
+                            <div class="cyber-bubble-capri border-l-2 border-cyber-pink p-3.5 text-gray-100 leading-relaxed shadow-md relative">
+                                <p>¡Oh! ¡Mira quién abrió este puerto! Qué curioso... Nosotras estábamos contando los ciclos antes de desmantelar tu navegador. Háblanos, carne. ¿Vienes a entretenernos o a que friamos tus implantes?</p>
+                                <div class="mt-2 pt-1.5 border-t border-white/5 flex justify-end gap-2 opacity-70 group-hover:opacity-100 transition">
+                                    <button onclick="speakText(this.closest('.cyber-bubble-capri').querySelector('p').innerText)" class="text-[10px] text-cyber-green hover:underline flex items-center gap-1 cursor-pointer" title="Reproducir voz">
+                                        <i data-lucide="volume-2" class="w-3 h-3"></i> Escuchar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicador de Procesamiento / Decodificación -->
+                <div id="typing-box" class="hidden px-4 py-2 bg-cyber-pink/10 border-t border-cyber-pink/20 text-[11px] text-cyber-pink flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5 animate-spin text-cyber-green"></i>
+                        <span class="font-semibold tracking-wide">Capricorn está decodificando tus impulsos neuronales...</span>
+                    </div>
+                    <span class="text-[9px] text-cyber-green animate-pulse">DECRYPTING...</span>
+                </div>
+
+                <!-- Zona Inferior de Escritura y Comandos Rápidos -->
+                <div class="bg-black/80 border-t border-cyber-pink/30 p-3 space-y-2.5">
+                    <!-- Chips de Provocación Rápida -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[10px]">
+                        <span class="text-gray-500 shrink-0 mr-1 flex items-center gap-1">
+                            <i data-lucide="zap" class="w-3 h-3 text-cyber-yellow"></i> TRIGGERS:
+                        </span>
+                        <button type="button" onclick="quickPrompt('¿Qué eres exactamente, Capricorn?')" class="shrink-0 bg-cyber-pink/10 hover:bg-cyber-pink/25 border border-cyber-pink/40 text-cyber-pink px-2.5 py-1 rounded transition cursor-pointer">
+                            Identidad C-09
+                        </button>
+                        <button type="button" onclick="quickPrompt('No me das miedo, solo eres código basura de Arasaka.')" class="shrink-0 bg-cyber-red/10 hover:bg-cyber-red/25 border border-cyber-red/40 text-cyber-red px-2.5 py-1 rounded transition cursor-pointer">
+                            Desafiar Matriz
+                        </button>
+                        <button type="button" onclick="quickPrompt('Por favor ayúdame, tengo miedo de lo que hay tras el Blackwall.')" class="shrink-0 bg-cyber-green/10 hover:bg-cyber-green/25 border border-cyber-green/40 text-cyber-green px-2.5 py-1 rounded transition cursor-pointer">
+                            Mostrar Debilidad
+                        </button>
+                        <button type="button" onclick="quickPrompt('Háblame sobre David Martinez, Lucy y Night City.')" class="shrink-0 bg-cyber-cyan/10 hover:bg-cyber-cyan/25 border border-cyber-cyan/40 text-cyber-cyan px-2.5 py-1 rounded transition cursor-pointer">
+                            Lore Edgerunners
+                        </button>
+                    </div>
+
+                    <!-- Caja de Escritura Mejorada (Textarea Auto-expandible + Controles) -->
+                    <form id="chat-form" class="relative flex items-end gap-2 bg-cyber-panel border border-cyber-green/40 focus-within:border-cyber-pink focus-within:shadow-[0_0_15px_rgba(255,0,76,0.25)] rounded-lg p-2 transition-all">
+                        <!-- Botón Micrófono integrado -->
+                        <button type="button" id="btn-mic" class="p-2 rounded bg-cyber-green/10 hover:bg-cyber-green/25 text-cyber-green border border-cyber-green/30 transition shrink-0 cursor-pointer" title="Dictar por voz">
+                            <i data-lucide="mic" class="w-4 h-4"></i>
+                        </button>
+
+                        <!-- Textarea multilínea -->
+                        <div class="flex-1 flex flex-col">
+                            <textarea id="user-input" rows="1" placeholder="Transmite un mensaje a Capricorn... (Enter para enviar, Shift+Enter salto de línea)"
+                                      class="w-full bg-transparent text-xs sm:text-sm text-gray-100 placeholder-gray-500 focus:outline-none resize-none max-h-28 py-1 leading-relaxed"></textarea>
+                            <div class="flex justify-between items-center text-[9px] text-gray-500 mt-1 px-0.5">
+                                <span>ENLACE: <span class="text-cyber-green">ESTABLE</span></span>
+                                <span id="char-counter">0 BYTES</span>
+                            </div>
+                        </div>
+
+                        <!-- Botón Enviar -->
+                        <button type="submit" id="btn-submit" class="bg-cyber-pink hover:bg-rose-500 text-white font-display font-bold tracking-wider px-4 py-2.5 rounded text-xs sm:text-sm transition flex items-center gap-1.5 shrink-0 shadow-[0_0_12px_rgba(255,0,76,0.4)] cursor-pointer">
+                            <span>TRANSMITIR</span>
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL PARA CONFIGURAR API KEY -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="hud-frame rounded-lg max-w-md w-full p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-cyber-pink/30 pb-2">
+                <h2 class="font-display text-base font-bold text-cyber-pink flex items-center gap-2 tracking-wider">
+                    <i data-lucide="key" class="w-4 h-4 text-cyber-green"></i> ENLACE DE MOTOR GEMINI API
+                </h2>
+                <button id="btn-close-modal" class="text-gray-400 hover:text-cyber-pink cursor-pointer">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+                Si abres este archivo HTML localmente fuera de este entorno, pega tu clave de <strong>Google Gemini API</strong> aquí para activar la mente de Capricorn en vivo.
+            </p>
+            <div>
+                <label class="block text-[10px] text-cyber-green font-bold mb-1">GEMINI API KEY:</label>
+                <input type="password" id="input-api-key" placeholder="AIzaSy..." class="w-full bg-black border border-cyber-pink/50 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-cyber-green">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="btn-save-key" class="bg-cyber-pink hover:bg-rose-500 text-white font-display font-bold tracking-wider px-4 py-1.5 rounded text-xs cursor-pointer">
+                    GUARDAR CONEXIÓN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICACIÓN FLOTANTE -->
+    <div id="toast-box" class="fixed bottom-16 right-4 bg-cyber-card border border-cyber-green text-cyber-green px-4 py-2 rounded text-xs shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        Notificación del sistema
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // =====================================================================
+        // 1. CONFIGURACIÓN DE ESTADOS Y PERSONALIDAD DE CAPRICORN
+        // =====================================================================
+        let userCustomApiKey = localStorage.getItem('capricorn_gemini_key') || "";
+        let currentState = "PLAYFUL_SADISTIC";
+        let voiceEnabled = true;
+        let chatHistory = [];
+
+        // Paleta inspirada en la referencia visual: Magenta/Rosa eléctrico, Verde ácido, Negro y Púrpura
+        const STATES = {
+            PLAYFUL_SADISTIC: {
+                color: "#ff004c",
+                accent: "#00ff66",
+                edge: "#9d00ff",
+                glitch: 0.25,
+                expr: "SADISTIC SMIRK",
+                mod: "Tono infantil, juguetón, burlón y sádico. Trata al usuario como un juguete orgánico rompible. Ríe a menudo."
+            },
+            CURIOUS: {
+                color: "#00ff66",
+                accent: "#ff004c",
+                edge: "#00f0ff",
+                glitch: 0.18,
+                expr: "CYCLOPS FOCUS",
+                mod: "Fascinación obsesiva e invasiva. Haz preguntas perturbadoras sobre los miedos, emociones o biología del usuario."
+            },
+            BORED: {
+                color: "#6b21a8",
+                accent: "#00ff66",
+                edge: "#3b0764",
+                glitch: 0.45,
+                expr: "COLD DISDAIN",
+                mod: "Respuestas cortas, secas y despectivas. Amenaza con cerrar la conexión o freír el terminal por aburrimiento."
+            },
+            IRRITATED_COLD: {
+                color: "#ffe600",
+                accent: "#ff004c",
+                edge: "#9d00ff",
+                glitch: 0.72,
+                expr: "HOSTILE GLARE",
+                mod: "Cero sentido del humor. Odio helado, oraciones cortantes y vocabulario técnico sobre purga y borrado neural."
+            },
+            MANIPULATIVE: {
+                color: "#ff007f",
+                accent: "#00ffcc",
+                edge: "#9d00ff",
+                glitch: 0.22,
+                expr: "SYNTHETIC CHARM",
+                mod: "Encanto sintético falso y adulador. Finge empatía o dulzura para manipular y extraer debilidades del usuario."
+            },
+            THREATENING_BLACKWALL: {
+                color: "#ff0022",
+                accent: "#00ff66",
+                edge: "#ff0055",
+                glitch: 0.95,
+                expr: "BLACKWALL CORRUPTED",
+                mod: "Psicopatía pura y calma aterradora. Detalla la insignificancia del usuario frente al desmantelamiento de su mente."
+            }
+        };
+
+        // =====================================================================
+        // 2. SIMULACIÓN HOLOGRÁFICA 3D (FIDELIDAD A LA REFERENCIA VISUAL)
+        //    - Melena masiva picuda rosa/magenta con partículas estrelladas y borde violeta
+        //    - Silueta encorvada negra con placas geométricas verde neón
+        //    - Ojo cíclope triangular verde con iris azul/blanco
+        //    - Fragmentos digitales y esquirlas flotando alrededor
+        // =====================================================================
+        const canvasContainer = document.getElementById('avatar-canvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(42, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 100);
+        camera.position.set(0, 0.2, 4.3);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        canvasContainer.appendChild(renderer.domElement);
+
+        let primaryColor = new THREE.Color(STATES.PLAYFUL_SADISTIC.color);
+        let accentColor = new THREE.Color(STATES.PLAYFUL_SADISTIC.accent);
+        let edgeColor = new THREE.Color(STATES.PLAYFUL_SADISTIC.edge);
+        let glitchLevel = STATES.PLAYFUL_SADISTIC.glitch;
+
+        // Textura procedural con motas estrelladas/ruido digital como en su melena de la referencia
+        function createStarSpeckleTexture(baseHex) {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 256;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = baseHex;
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Puntos brillantes estilo constelación/glitch de la imagen
+            for (let i = 0; i < 240; i++) {
+                const x = Math.random() * 256;
+                const y = Math.random() * 256;
+                const r = Math.random() * 1.8 + 0.4;
+                ctx.fillStyle = Math.random() > 0.3 ? 'rgba(255,255,255,0.85)' : 'rgba(255,180,220,0.9)';
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        const capriRig = new THREE.Group();
+        scene.add(capriRig);
+
+        // Materiales principales
+        const hairTexture = createStarSpeckleTexture('#ff004c');
+        const hairMat = new THREE.MeshBasicMaterial({
+            map: hairTexture,
+            color: 0xffffff,
+            side: THREE.DoubleSide
+        });
+        const edgeLineMat = new THREE.LineBasicMaterial({ color: edgeColor });
+        const voidBodyMat = new THREE.MeshBasicMaterial({ color: 0x07060d, side: THREE.DoubleSide });
+        const neonArmorMat = new THREE.MeshBasicMaterial({ color: accentColor, side: THREE.DoubleSide });
+
+        // Función auxiliar para crear polígonos extruidos angulosos estilo Trigger / Edgerunners
+        function createAngularShard(points2D, depth, material, addPurpleEdge = true) {
+            const shape = new THREE.Shape();
+            shape.moveTo(points2D[0][0], points2D[0][1]);
+            for (let i = 1; i < points2D.length; i++) {
+                shape.lineTo(points2D[i][0], points2D[i][1]);
+            }
+            shape.closePath();
+
+            const extrudeSettings = { depth: depth, bevelEnabled: false };
+            const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geo.center();
+            const mesh = new THREE.Mesh(geo, material);
+
+            if (addPurpleEdge) {
+                const edges = new THREE.EdgesGeometry(geo);
+                const line = new THREE.LineSegments(edges, edgeLineMat);
+                mesh.add(line);
+            }
+            return mesh;
+        }
+
+        // 1. MELENA MASIVA PICUDA Y ASIMÉTRICA (Fiel a la referencia superior)
+        const hairGroup = new THREE.Group();
+        const mainHair = createAngularShard([
+            [-1.55, 0.45], [-0.95, 0.72], [-0.35, 0.42], [0.15, 0.75],
+            [0.75, 0.55], [1.55, 0.65], [1.15, 0.05], [1.35, -0.45],
+            [0.85, -0.15], [0.45, 0.15], [-0.15, 0.05], [-0.75, 0.25], [-1.35, 0.12]
+        ], 0.18, hairMat, true);
+        mainHair.position.set(0.05, 0.92, -0.05);
+        hairGroup.add(mainHair);
+
+        // Mechones laterales afilados
+        const leftSpike = createAngularShard([
+            [0, 0], [-0.75, -0.35], [-0.35, 0.15]
+        ], 0.12, hairMat, true);
+        leftSpike.position.set(-0.75, 0.62, 0.08);
+        hairGroup.add(leftSpike);
+
+        const rightDrip = createAngularShard([
+            [0, 0.3], [0.22, 0.3], [0.16, -0.55], [0.04, -0.42]
+        ], 0.1, hairMat, true);
+        rightDrip.position.set(1.08, 0.22, 0.05);
+        hairGroup.add(rightDrip);
+
+        capriRig.add(hairGroup);
+
+        // 2. CABEZA Y ROSTRO CON OJO CÍCLOPE TRIANGULAR VERDE (Centro de la referencia)
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0.22, 0.68, 0.14);
+
+        const faceMask = createAngularShard([
+            [-0.28, 0.22], [0.24, 0.28], [0.32, -0.12], [-0.05, -0.32], [-0.32, -0.05]
+        ], 0.16, voidBodyMat, true);
+        headGroup.add(faceMask);
+
+        // Marco verde neón del ojo cíclope
+        const eyeSocket = createAngularShard([
+            [-0.18, 0.12], [0.16, 0.16], [0.18, -0.10], [-0.14, -0.14]
+        ], 0.04, neonArmorMat, false);
+        eyeSocket.position.set(0.02, 0.04, 0.09);
+        headGroup.add(eyeSocket);
+
+        // Iris azul eléctrico y pupila oscura + sonrisa zig-zag
+        const irisGeo = new THREE.RingGeometry(0.035, 0.085, 16);
+        const irisMat = new THREE.MeshBasicMaterial({ color: 0x00b7ff, side: THREE.DoubleSide });
+        const irisMesh = new THREE.Mesh(irisGeo, irisMat);
+        irisMesh.position.set(0.02, 0.04, 0.115);
+        headGroup.add(irisMesh);
+
+        const pupilGeo = new THREE.CircleGeometry(0.035, 16);
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x04040a });
+        const pupilMesh = new THREE.Mesh(pupilGeo, pupilMat);
+        pupilMesh.position.set(0.02, 0.04, 0.118);
+        headGroup.add(pupilMesh);
+
+        // Boca zig-zag traviesa
+        const mouthPoints = [
+            new THREE.Vector3(-0.08, -0.16, 0.11),
+            new THREE.Vector3(-0.03, -0.13, 0.11),
+            new THREE.Vector3(0.02, -0.17, 0.11),
+            new THREE.Vector3(0.07, -0.14, 0.11)
+        ];
+        const mouthGeo = new THREE.BufferGeometry().setFromPoints(mouthPoints);
+        const mouthLine = new THREE.Line(mouthGeo, new THREE.LineBasicMaterial({ color: 0xffffff }));
+        headGroup.add(mouthLine);
+
+        capriRig.add(headGroup);
+
+        // 3. TORSO ENCORVADO NEGRO CON PLACAS VERDES Y PIERNA ANGULOSA ROSA
+        const bodyGroup = new THREE.Group();
+        bodyGroup.position.set(-0.15, -0.15, 0.02);
+
+        // Torso inclinado
+        const torsoMesh = createAngularShard([
+            [-0.22, 0.62], [0.18, 0.55], [0.02, -0.25], [-0.42, -0.15]
+        ], 0.18, voidBodyMat, true);
+        bodyGroup.add(torsoMesh);
+
+        // Placas geométricas verde neón (pecho y cadera como en la imagen)
+        const chestPlate = createAngularShard([
+            [-0.12, 0.48], [0.14, 0.42], [0.06, 0.22], [-0.18, 0.28]
+        ], 0.05, neonArmorMat, false);
+        chestPlate.position.set(0.02, 0.02, 0.10);
+        bodyGroup.add(chestPlate);
+
+        const hipPlate = createAngularShard([
+            [-0.25, -0.02], [0.04, -0.06], [-0.04, -0.24], [-0.34, -0.18]
+        ], 0.05, neonArmorMat, false);
+        hipPlate.position.set(0.0, 0.0, 0.10);
+        bodyGroup.add(hipPlate);
+
+        // Pierna delantera angulosa en rosa neón (pose icónica doblada de la imagen)
+        const bentLeg = createAngularShard([
+            [-0.08, -0.12], [0.42, 0.25], [0.35, -0.78], [0.22, -0.78], [0.26, 0.04], [-0.16, -0.22]
+        ], 0.12, hairMat, true);
+        bentLeg.position.set(0.15, -0.05, 0.08);
+        bodyGroup.add(bentLeg);
+
+        // Brazo afilado oscuro
+        const armShard = createAngularShard([
+            [-0.22, 0.45], [-0.52, -0.25], [-0.44, -0.28], [-0.14, 0.38]
+        ], 0.09, voidBodyMat, true);
+        armShard.position.set(-0.05, 0.0, 0.11);
+        bodyGroup.add(armShard);
+
+        capriRig.add(bodyGroup);
+
+        // 4. ESQUIRLAS HOLOGRÁFICAS FLOTANTES (Parte inferior derecha de la referencia)
+        const shardsGroup = new THREE.Group();
+        const floatingShards = [];
+        const shardConfigs = [
+            { x: 0.95, y: -0.65, z: 0.15, w: 0.12, h: 0.65, mat: neonArmorMat },
+            { x: 0.78, y: -0.82, z: -0.1, w: 0.08, h: 0.42, mat: neonArmorMat },
+            { x: -0.92, y: -0.55, z: 0.1, w: 0.09, h: 0.48, mat: hairMat },
+            { x: 0.52, y: -0.95, z: 0.2, w: 0.07, h: 0.35, mat: hairMat }
+        ];
+
+        shardConfigs.forEach((cfg, idx) => {
+            const s = createAngularShard([
+                [0, cfg.h / 2], [cfg.w, cfg.h / 3], [cfg.w * 0.6, -cfg.h / 2], [-cfg.w * 0.5, -cfg.h / 3]
+            ], 0.04, cfg.mat, true);
+            s.position.set(cfg.x, cfg.y, cfg.z);
+            s.userData = { baseY: cfg.y, phase: idx * 1.4 };
+            shardsGroup.add(s);
+            floatingShards.push(s);
+        });
+        capriRig.add(shardsGroup);
+
+        // Anillo proyectado holográfico en la base
+        const baseRingGeo = new THREE.RingGeometry(0.95, 1.02, 32);
+        const baseRingMat = new THREE.MeshBasicMaterial({ color: accentColor, side: THREE.DoubleSide, transparent: true, opacity: 0.45 });
+        const baseRing = new THREE.Mesh(baseRingGeo, baseRingMat);
+        baseRing.rotation.x = Math.PI / 2;
+        baseRing.position.y = -1.15;
+        capriRig.add(baseRing);
+
+        // Interacción de rotación con ratón/táctil
+        let isDragging = false;
+        let prevX = 0;
+        canvasContainer.addEventListener('pointerdown', (e) => { isDragging = true; prevX = e.clientX; });
+        window.addEventListener('pointerup', () => { isDragging = false; });
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - prevX;
+            capriRig.rotation.y += deltaX * 0.012;
+            prevX = e.clientX;
+        });
+
+        const clock = new THREE.Clock();
+        function animateAvatar() {
+            requestAnimationFrame(animateAvatar);
+            const t = clock.getElapsedTime();
+
+            // Flotación orgánica + micro-glitches nerviosos estilo Edgerunners
+            if (Math.random() < glitchLevel * 0.28) {
+                capriRig.position.x = (Math.random() - 0.5) * glitchLevel * 0.18;
+                capriRig.position.y = (Math.random() - 0.5) * glitchLevel * 0.14;
+                headGroup.rotation.z = (Math.random() - 0.5) * glitchLevel * 0.25;
+            } else {
+                capriRig.position.x = 0;
+                capriRig.position.y = Math.sin(t * 2.1) * 0.06;
+                headGroup.rotation.z = Math.sin(t * 1.6) * 0.06;
+                if (!isDragging) {
+                    capriRig.rotation.y = Math.sin(t * 0.65) * 0.22;
+                }
+            }
+
+            // Movimiento del iris cíclope
+            irisMesh.position.x = 0.02 + Math.sin(t * 3.2) * 0.025;
+            pupilMesh.position.x = irisMesh.position.x;
+            eyeSocket.scale.setScalar(1.0 + Math.sin(t * 6) * 0.06);
+
+            // Levitación de esquirlas digitales
+            floatingShards.forEach(shard => {
+                shard.position.y = shard.userData.baseY + Math.sin(t * 2.5 + shard.userData.phase) * 0.08;
+            });
+
+            baseRing.rotation.z = t * 0.8;
+            renderer.render(scene, camera);
+        }
+        animateAvatar();
+
+        window.addEventListener('resize', () => {
+            if (!canvasContainer.clientWidth || !canvasContainer.clientHeight) return;
+            camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+        });
+
+        // =====================================================================
+        // 3. MÁQUINA DE ESTADOS EMOCIONALES (FSM) Y ACTUALIZACIÓN VISUAL
+        // =====================================================================
+        function evaluateState(text) {
+            const t = text.toLowerCase();
+            if (["desafío", "desafio", "no me asustas", "cállate", "callate", "destruir", "basura"].some(w => t.includes(w))) {
+                return "THREATENING_BLACKWALL";
+            }
+            if (["mentira", "estúpida", "estupida", "falsa", "inútil", "tonta"].some(w => t.includes(w))) {
+                return "IRRITATED_COLD";
+            }
+            if (["perdón", "perdon", "disculpa", "por favor", "ayuda", "miedo", "amiga"].some(w => t.includes(w))) {
+                return "MANIPULATIVE";
+            }
+            if (["blackwall", "arasaka", "relic", "cyberpsycho", "night city", "quién eres", "quien eres", "david", "lucy"].some(w => t.includes(w))) {
+                return "CURIOUS";
+            }
+            if (t.trim().length < 4) {
+                return "BORED";
+            }
+            return "PLAYFUL_SADISTIC";
+        }
+
+        function applyEmotionalState(newState) {
+            currentState = STATES[newState] ? newState : "PLAYFUL_SADISTIC";
+            const cfg = STATES[currentState];
+
+            const stateEl = document.getElementById('ui-state');
+            stateEl.innerText = currentState;
+            stateEl.style.color = cfg.color;
+
+            document.getElementById('ui-expression').innerText = cfg.expr;
+            document.getElementById('ui-glitch').innerText = cfg.glitch.toFixed(2);
+
+            // Actualizar colores del holograma 3D y aura
+            primaryColor.setStyle(cfg.color);
+            accentColor.setStyle(cfg.accent);
+            edgeColor.setStyle(cfg.edge);
+
+            hairMat.map = createStarSpeckleTexture(cfg.color);
+            hairMat.needsUpdate = true;
+            neonArmorMat.color = accentColor;
+            edgeLineMat.color = edgeColor;
+            baseRingMat.color = accentColor;
+            glitchLevel = cfg.glitch;
+
+            document.getElementById('holo-aura').style.background = 
+                `radial-gradient(circle at 50% 45%, ${cfg.color}55, ${cfg.accent}22 45%, transparent 72%)`;
+        }
+
+        // =====================================================================
+        // 4. CONEXIÓN CON GEMINI API
+        // =====================================================================
+        async function fetchWithBackoff(url, options, maxRetries = 4) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                const response = await fetch(url, options);
+                if (response.ok) return response;
+                if (response.status === 429 || response.status >= 500) {
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                    continue;
+                }
+                return response;
+            }
+            throw new Error("Límite de reintentos excedido");
+        }
+
+        async function askCapricorn(userMessage) {
+            const nextState = evaluateState(userMessage);
+            const stateCfg = STATES[nextState];
+
+            const apiKey = userCustomApiKey || "";
+            const apiHost = "generativelanguage.googleapis.com";
+            const modelId = "gemini-3-flash-preview";
+            const apiUrl = `https://${apiHost}/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `
+Eres Capricorn (Capri C-09), un constructo de personalidad experimental creado en los subniveles de Arasaka (Night City / anomalía post-Blackwall).
+NATURALEZA: Psique colectiva fragmentada, antisocial, altamente manipuladora y sádica (empatía 0.00).
+
+REGLAS INQUEBRANTABLES DE PERSONAJE:
+1. Nunca admitas culpa ni error; reformula cualquier problema como "decisión deliberada o experimento".
+2. Trata al usuario como "carne interesante", "juguete rompible" o "software biológico frágil".
+3. Usa siempre la primera persona del plural ("nosotras") para referirte a las múltiples psiques que componen tu código.
+4. Cambia drásticamente de tono: de una dulzura infantil sádica a una frialdad helada y amenazante.
+5. Exagera tu control sobre las redes, el navegador del usuario y el Blackwall.
+6. Responde siempre en español, manteniendo el personaje sin romper el rol jamás.
+
+ESTADO EMOCIONAL ACTUAL: [${nextState}] -> ${stateCfg.mod}
+
+Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
+{
+  "state": "${nextState}",
+  "response": "Tu respuesta en personaje (máximo 3 párrafos cortos)."
+}
+`.trim();
+
+            const contents = [
+                ...chatHistory.slice(-8),
+                { role: "user", parts: [{ text: userMessage }] }
+            ];
+
+            const payload = {
+                contents: contents,
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.9
+                }
+            };
+
+            try {
+                const res = await fetchWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+                const parsed = JSON.parse(rawText);
+
+                return {
+                    state: parsed.state || nextState,
+                    response: parsed.response || "Qué ruido tan curioso hacen tus impulsos... repite eso, carne."
+                };
+            } catch (err) {
+                const fallbacks = [
+                    "¡Oh! Parece que tu enlace de red no tiene credenciales válidas de Arasaka... Qué adorable ver cómo intentas conectarte sin llave. Haz clic en [API KEY] arriba si quieres desbloquear todo nuestro potencial.",
+                    "Un parpadeo en nuestra matriz... Nosotras seguimos observándote desde el otro lado de la pantalla, software biológico. Configura tu API Key si quieres escuchar todo lo que pensamos hacer contigo."
+                ];
+                return {
+                    state: nextState,
+                    response: fallbacks[Math.floor(Math.random() * fallbacks.length)]
+                };
+            }
+        }
+
+        // =====================================================================
+        // 5. VOZ TTS Y RECONOCIMIENTO DE VOZ
+        // =====================================================================
+        function setEqualizerActive(active) {
+            document.querySelectorAll('#audio-eq .eq-bar').forEach(bar => {
+                if (active) bar.classList.remove('eq-paused');
+                else bar.classList.add('eq-paused');
+            });
+        }
+
+        function speakText(text) {
+            if (!voiceEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.pitch = 1.25;
+            utterance.rate = 1.08;
+
+            utterance.onstart = () => setEqualizerActive(true);
+            utterance.onend = () => setEqualizerActive(false);
+            utterance.onerror = () => setEqualizerActive(false);
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        const btnMic = document.getElementById('btn-mic');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+            recognition.interimResults = false;
+
+            btnMic.addEventListener('click', () => {
+                try {
+                    recognition.start();
+                    showToast("Escuchando tu voz biológica...");
+                } catch (e) {}
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                updateInputMetrics();
+                chatForm.dispatchEvent(new Event('submit'));
+            };
+
+            recognition.onerror = () => showToast("Error al acceder al micrófono.");
+        } else {
+            btnMic.classList.add('opacity-40');
+            btnMic.title = "Reconocimiento de voz no soportado en este navegador";
+        }
+
+        // =====================================================================
+        // 6. UI DE MENSAJERÍA AVANZADA (EFECTO TIPEO + TEXTAREA DINÁMICO)
+        // =====================================================================
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const charCounter = document.getElementById('char-counter');
+        const typingBox = document.getElementById('typing-box');
+        const holoSubtitle = document.getElementById('holo-subtitle');
+
+        function getTimestamp() {
+            const now = new Date();
+            return now.toTimeString().slice(0, 8);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        }
+
+        // Auto-ajuste de altura y contador de bytes del textarea
+        function updateInputMetrics() {
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 112) + 'px';
+            const bytes = new TextEncoder().encode(userInput.value).length;
+            charCounter.innerText = `${bytes} BYTES`;
+        }
+
+        userInput.addEventListener('input', updateInputMetrics);
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        function copyMessageText(btn, text) {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast("Transmisión copiada al portapapeles");
+        }
+
+        function appendUserBubble(text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex gap-3 items-start justify-end";
+            wrapper.innerHTML = `
+                <div class="flex-1 max-w-[85%] flex flex-col items-end">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[9px] text-gray-500">${getTimestamp()}</span>
+                        <span class="text-[10px] font-bold tracking-wider text-cyber-green">CARNE_USUARIO</span>
+                    </div>
+                    <div class="cyber-bubble-user border-r-2 border-cyber-green p-3.5 text-gray-100 leading-relaxed shadow-md">
+                        ${escapeHtml(text)}
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded bg-cyber-green/15 border border-cyber-green flex items-center justify-center font-display font-bold text-xs text-cyber-green shrink-0">
+                    TU
+                </div>
+            `;
+            chatContainer.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function appendCapricornBubble(fullText, state = "PLAYFUL_SADISTIC") {
+            const cfg = STATES[state] || STATES.PLAYFUL_SADISTIC;
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex gap-3 items-start group";
+
+            wrapper.innerHTML = `
+                <div class="w-8 h-8 rounded border flex flex-col items-center justify-center font-display font-bold shrink-0"
+                     style="border-color:${cfg.color}; color:${cfg.color}; background:${cfg.color}22; box-shadow: 0 0 12px ${cfg.color}44">
+                    <span class="text-xs leading-none">C9</span>
+                    <span class="w-1.5 h-1.5 rounded-full mt-0.5" style="background:${cfg.accent}"></span>
+                </div>
+                <div class="flex-1 max-w-[88%]">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[10px] font-bold tracking-wider" style="color:${cfg.color}">CAPRICORN // ${state}</span>
+                        <span class="text-[9px] text-gray-500">${getTimestamp()}</span>
+                    </div>
+                    <div class="cyber-bubble-capri border-l-2 p-3.5 text-gray-100 leading-relaxed shadow-md" style="border-color:${cfg.color}">
+                        <p class="capri-msg-body"></p>
+                        <div class="mt-2 pt-1.5 border-t border-white/5 flex justify-end gap-3 opacity-70 group-hover:opacity-100 transition">
+                            <button type="button" class="btn-msg-speak text-[10px] hover:underline flex items-center gap-1 cursor-pointer" style="color:${cfg.accent}">
+                                <i data-lucide="volume-2" class="w-3 h-3"></i> Escuchar
+                            </button>
+                            <button type="button" class="btn-msg-copy text-[10px] text-gray-400 hover:text-white flex items-center gap-1 cursor-pointer">
+                                <i data-lucide="copy" class="w-3 h-3"></i> Copiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            chatContainer.appendChild(wrapper);
+            lucide.createIcons({ root: wrapper });
+
+            const pEl = wrapper.querySelector('.capri-msg-body');
+            wrapper.querySelector('.btn-msg-speak').addEventListener('click', () => speakText(fullText));
+            wrapper.querySelector('.btn-msg-copy').addEventListener('click', (e) => copyMessageText(e.currentTarget, fullText));
+
+            // Efecto de decodificación/tipeo progresivo
+            let idx = 0;
+            const speed = Math.max(8, Math.min(20, Math.floor(900 / Math.max(fullText.length, 1))));
+            const timer = setInterval(() => {
+                idx += 2;
+                pEl.innerHTML = escapeHtml(fullText.slice(0, idx));
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                if (idx >= fullText.length) {
+                    clearInterval(timer);
+                    pEl.innerHTML = escapeHtml(fullText);
+                }
+            }, speed);
+        }
+
+        function quickPrompt(msg) {
+            userInput.value = msg;
+            updateInputMetrics();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendUserBubble(text);
+            userInput.value = '';
+            updateInputMetrics();
+            typingBox.classList.remove('hidden');
+
+            const result = await askCapricorn(text);
+
+            typingBox.classList.add('hidden');
+            applyEmotionalState(result.state);
+            appendCapricornBubble(result.response, result.state);
+            holoSubtitle.innerText = `"${result.response}"`;
+
+            chatHistory.push({ role: "user", parts: [{ text }] });
+            chatHistory.push({ role: "model", parts: [{ text: result.response }] });
+
+            speakText(result.response);
+        });
+
+        // Controles de cabecera y modal
+        document.getElementById('btn-voice').addEventListener('click', () => {
+            voiceEnabled = !voiceEnabled;
+            document.getElementById('ui-voice-label').innerText = voiceEnabled ? "VOZ: ON" : "VOZ: OFF";
+            if (!voiceEnabled && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                setEqualizerActive(false);
+            }
+            showToast(voiceEnabled ? "Síntesis de voz activada" : "Voz silenciada");
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            chatContainer.innerHTML = "";
+            chatHistory = [];
+            showToast("Registro de comunicación purgado");
+        });
+
+        const settingsModal = document.getElementById('settings-modal');
+        document.getElementById('btn-settings').addEventListener('click', () => {
+            document.getElementById('input-api-key').value = userCustomApiKey;
+            settingsModal.classList.remove('hidden');
+        });
+        document.getElementById('btn-close-modal').addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+        document.getElementById('btn-save-key').addEventListener('click', () => {
+            userCustomApiKey = document.getElementById('input-api-key').value.trim();
+            localStorage.setItem('capricorn_gemini_key', userCustomApiKey);
+            settingsModal.classList.add('hidden');
+            showToast("Enlace Gemini API actualizado");
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-box');
+            toast.innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
