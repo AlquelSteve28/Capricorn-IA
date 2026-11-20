@@ -13,6 +13,15 @@ Constructo de personalidad ficticio (universo *Cyberpunk 2077*) con:
   - El "botín" capturado se inyecta en el prompt del constructo para responder con datos reales sin romper el rol.
 - **Motores LLM**: Gemini (`--apikey`, o var `GEMINI_API_KEY`), Ollama local, o modo simulación autónomo sin LLM.
 
+## Interfaz HOLO (avatar 3D + voz)
+
+`capricorn_holo.html` es una interfaz alternativa autónoma: avatar holográfico 3D
+(Three.js) que reacciona al estado emocional, títulos HUD estilo Edgerunners,
+texto a voz (es-ES), dictado por micrófono y conexión directa con Gemini desde el
+navegador (tu API key se guarda solo en tu `localStorage`). Le funciona sin
+servidor Python: abre el archivo directamente o sírvela con `python3 capricorn_web.py`
+y visita `http://127.0.0.1:8080/holo`.
+
 ## Instalación
 
 ```bash

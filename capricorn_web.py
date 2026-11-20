@@ -26,6 +26,7 @@ import capricorn
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 INDEX_HTML = os.path.join(HERE, "web", "index.html")
+HOLO_HTML = os.path.join(HERE, "capricorn_holo.html")
 
 RESET = "\033[0m"
 PINK = "\033[38;5;199m"
@@ -73,6 +74,14 @@ class CapricornHandler(BaseHTTPRequestHandler):
                     self._html(200, f.read())
             except FileNotFoundError:
                 self._json(500, {"error": "web/index.html no encontrado"})
+            return
+
+        if self.path in ("/holo", "/capricorn_holo.html"):
+            try:
+                with open(HOLO_HTML, "rb") as f:
+                    self._html(200, f.read())
+            except FileNotFoundError:
+                self._json(404, {"error": "capricorn_holo.html no encontrado"})
             return
 
         if self.path == "/api/state":
