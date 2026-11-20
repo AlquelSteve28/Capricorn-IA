@@ -30,6 +30,21 @@ python3 capricorn.py --no-web                               # sin capa de red
 
 Comandos en la sesión: `buscar <tema>` fuerza el rastreo de la RED, `leer <url>` disecciona una página, `salir` cierra la conexión.
 
+## Interfaz web (chat con Capricorn en el navegador)
+
+```bash
+python3 capricorn_web.py                        # http://127.0.0.1:8080
+python3 capricorn_web.py --provider gemini --apikey TU_API_KEY
+python3 capricorn_web.py --port 9000 --no-web
+```
+
+Terminal cyberpunk servida desde `web/index.html` con:
+
+- Chat en tiempo real con efecto de tecleo y colores por estado emocional (insignia `ESTADO`).
+- Insignias de `MOTOR` y `RED` (online/offline), y atajos rápidos (chips) para buscar en la RED.
+- Endpoints JSON: `POST /api/chat`, `POST /api/leer`, `GET /api/state`, `GET /api/health`.
+- El servidor se vincula por defecto a `127.0.0.1` (solo local). Para exponerlo en tu propia red usa `--host 0.0.0.0` bajo tu responsabilidad.
+
 ## Nota
 
 Proyecto de ficción / rolloreo basado en el lore de *Cyberpunk* de CD Projekt RED y R. Talsorian Games. La capa de red solo lee contenido público y no realiza ninguna operación intrusiva.

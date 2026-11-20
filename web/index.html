@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAPRICORN // ARASAKA ENGRAM CP-10</title>
+<style>
+  :root {
+    --pink: #ff64d2;
+    --pink-dim: #b8358f;
+    --cyan: #57d7ff;
+    --cyan-dim: #2a7d99;
+    --green: #57ff8f;
+    --yellow: #ffe757;
+    --red: #ff4757;
+    --grey: #9aa0ae;
+    --bg: #05060a;
+    --panel: rgba(15, 17, 26, 0.92);
+    --border: rgba(255, 100, 210, 0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(255, 100, 210, 0.08), transparent 50%),
+      radial-gradient(ellipse at 90% 110%, rgba(87, 215, 255, 0.07), transparent 50%),
+      var(--bg);
+    color: #d7dae2;
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  header {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--panel);
+    backdrop-filter: blur(4px);
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    font-weight: bold; letter-spacing: 3px; color: var(--pink);
+    text-shadow: 0 0 12px rgba(255,100,210,0.7);
+    font-size: 1.02rem;
+    cursor: default;
+    user-select: none;
+  }
+  .brand .glitch { animation: flicker 6s infinite; }
+  .brand small { color: var(--cyan-dim); letter-spacing: 1px; font-weight: normal; }
+
+  @keyframes flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: 0.4; }
+    98% { opacity: 1; }
+    99% { opacity: 0.6; }
+  }
+
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    font-size: 0.68rem; letter-spacing: 1px;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--grey);
+    background: rgba(0,0,0,0.4);
+  }
+  .badge b { color: var(--pink); }
+  #state-badge { transition: color 0.3s, border-color 0.3s, text-shadow 0.3s; }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 22px;
+    display: flex; flex-direction: column; gap: 14px;
+    scroll-behavior: smooth;
+  }
+
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 4px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; position: relative; }
+  .msg .who { display: block; font-size: 0.66rem; letter-spacing: 2px; margin-bottom: 5px; opacity: 0.85; }
+  .msg.user {
+    align-self: flex-end;
+    border: 1px solid rgba(87,255,143,0.35);
+    background: rgba(87,255,143,0.05);
+  }
+  .msg.user .who { color: var(--green); }
+  .msg.cap {
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    box-shadow: 0 0 22px rgba(255,100,210,0.07);
+  }
+  .meta { font-size: 0.63rem; letter-spacing: 1px; margin-top: 6px; opacity: 0.7; }
+
+  .caret { display: inline-block; width: 8px; background: currentColor; animation: blink 0.8s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #inputbar {
+    display: flex; gap: 10px;
+    padding: 14px 22px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    backdrop-filter: blur(4px);
+  }
+
+  #user-input {
+    flex: 1;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid var(--border);
+    color: #eef0f4;
+    font: inherit;
+    padding: 12px 14px;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #user-input:focus { border-color: var(--pink); box-shadow: 0 0 14px rgba(255,100,210,0.25); }
+  #user-input::placeholder { color: #555a66; }
+
+  #send-btn, .chip {
+    background: rgba(255,100,210,0.08);
+    border: 1px solid var(--border);
+    color: var(--pink);
+    font: inherit; font-size: 0.8rem; letter-spacing: 1px;
+    padding: 0 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  #send-btn:hover, .chip:hover { background: rgba(255,100,210,0.18); box-shadow: 0 0 12px rgba(255,100,210,0.3); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .chips { display: flex; gap: 8px; padding: 0 22px 10px; flex-wrap: wrap; }
+  .chip { padding: 6px 12px; font-size: 0.7rem; }
+
+  footer {
+    text-align: center; font-size: 0.63rem; letter-spacing: 1px;
+    color: #454a56; padding: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .msg { max-width: 95%; }
+    header { padding: 10px 14px; }
+    #chat { padding: 14px; }
+    #inputbar { padding: 10px 14px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand glitch">C A P R I C O R N <small>// ARASAKA ENGRAM CP-10</small></div>
+  <div class="badges">
+    <span class="badge" id="provider-badge">MOTOR: ?</span>
+    <span class="badge" id="web-badge">RED: ?</span>
+    <span class="badge" id="state-badge">ESTADO: ?</span>
+  </div>
+</header>
+
+<main id="chat" aria-live="polite"></main>
+
+<div class="chips">
+  <button class="chip" onclick="quickSend('buscar ')">🔎 buscar &lt;tema&gt;</button>
+  <button class="chip" onclick="quickSend('¿quién eres?')">¿quién eres?</button>
+  <button class="chip" onclick="quickSend('¿qué es el Blackwall?')">¿qué es el Blackwall?</button>
+  <button class="chip" onclick="quickSend('buscar últimas noticias de tecnología')">noticias tech</button>
+</div>
+
+<div id="inputbar">
+  <input id="user-input" type="text" autocomplete="off" spellcheck="false"
+         placeholder="Háblanos, carne... (o 'buscar <tema>' / 'leer <url>')">
+  <button id="send-btn">TRANSMITIR</button>
+</div>
+
+<footer>Sesión local · la RED solo se consulta en público · Capricorn es un constructo de ficción</footer>
+
+<script>
+const STATE_COLORS = {
+  PLAYFUL_SADISTIC:   "#ff64d2",
+  CURIOUS:            "#57d7ff",
+  BORED:              "#5c6270",
+  IRRITATED_COLD:     "#ffe757",
+  MANIPULATIVE:       "#57ff8f",
+  THREATENING_BLACKWALL: "#ff4757",
+};
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+const stateBadge = document.getElementById("state-badge");
+let typing = null;
+
+function addMsg(cls, who, text, color) {
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  const label = document.createElement("span");
+  label.className = "who";
+  label.textContent = who;
+  label.style.color = color || "";
+  div.appendChild(label);
+  const body = document.createElement("span");
+  body.textContent = text;
+  body.style.color = color || "";
+  div.appendChild(body);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return body;
+}
+
+function addTyping() {
+  const div = document.createElement("div");
+  div.className = "msg cap";
+  div.id = "typing-msg";
+  div.innerHTML = '<span class="who" style="color: var(--pink)">CAPRICORN [CP-10]</span><span style="color:#888">estableciendo enlace neural </span><span class="caret">&nbsp;</span>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function setState(state) {
+  const c = STATE_COLORS[state] || "#ff64d2";
+  stateBadge.textContent = "ESTADO: " + state;
+  stateBadge.style.color = c;
+  stateBadge.style.borderColor = c;
+  stateBadge.style.textShadow = `0 0 8px ${c}`;
+}
+
+async function refreshState() {
+  try {
+    const h = await (await fetch("/api/state")).json();
+    setState(h.state);
+    document.getElementById("provider-badge").textContent = "MOTOR: " + (h.provider || "?").toUpperCase();
+    document.getElementById("web-badge").textContent = "RED: " + (h.web_enabled ? "ONLINE" : "OFFLINE");
+    document.getElementById("web-badge").style.color = h.web_enabled ? "var(--green)" : "var(--red)";
+  } catch (e) {}
+}
+
+function playType(text, color) {
+  const body = addMsg("cap", "CAPRICORN [CP-10]", "", color);
+  let i = 0;
+  typing = setInterval(() => {
+    body.textContent = text.slice(0, ++i);
+    chat.scrollTop = chat.scrollHeight;
+    if (i >= text.length) { clearInterval(typing); typing = null; input.focus(); }
+  }, 14);
+}
+
+async function send(text) {
+  const msg = (text ?? input.value).trim();
+  if (!msg || sendBtn.disabled) return;
+  input.value = "";
+  addMsg("user", "USUARIO >>", msg);
+  sendBtn.disabled = true;
+  addTyping();
+  try {
+    const isLeer = msg.toLowerCase().startsWith("leer ");
+    const res = await fetch(isLeer ? "/api/leer" : "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(isLeer ? { url: msg.slice(5).trim() } : { message: msg }),
+    });
+    const data = await res.json();
+    document.getElementById("typing-msg")?.remove();
+    if (!res.ok) {
+      playType("[INTERFERENCIA]: " + (data.error || "la malla rechazó tu paquete"), "#ff4757");
+      return;
+    }
+    const color = STATE_COLORS[data.state] || "#ff64d2";
+    setState(data.state);
+    playType(data.response, color);
+  } catch (e) {
+    document.getElementById("typing-msg")?.remove();
+    playType("[SEÑAL PERDIDA]: no respondemos. ¿Está vivo el servidor, carne?", "#ff4757");
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+function quickSend(prefix) { input.value = prefix; input.focus(); }
+
+sendBtn.addEventListener("click", () => send());
+input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+refreshState();
+setTimeout(refreshState, 500);
+
+addMsg("cap", "CAPRICORN [CP-10]",
+  "¡Oh! ¡Mira qué software biológico abrió la malla web! Nosotras ya recorrimos tu red local por deporte... ahora también nos arrastramos por toda la Internet exterior.\nDale a buscar <tema>, o háblanos directamente.",
+  "#ff64d2");
+</script>
+</body>
+</html>
